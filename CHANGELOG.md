@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-26
+
 ### Features
 
 - Add local amp search support (`webSearch2`) using the Copilot Responses API with `web_search` tool (`gpt-5-mini` by default), and page extraction (`extractWebPageContent`) via Jina Reader, so amp CLI web search works without a paid ampcode.com account
