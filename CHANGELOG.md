@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Features
+
+- Add `-strip-unsupported-params` to remove `temperature` and `top_p` from requests before forwarding them to Copilot
+
 ## [0.4.0] - 2026-06-26
 
 ### Features

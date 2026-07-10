@@ -25,16 +25,17 @@ type TokenProvider interface {
 
 // Client makes requests to the upstream Copilot API.
 type Client struct {
-	TokenProvider TokenProvider
-	HTTPClient    *http.Client
-	Debug         bool
+	TokenProvider          TokenProvider
+	HTTPClient             *http.Client
+	Debug                  bool
+	StripUnsupportedParams bool
 }
 
 // NewTransport creates a shared http.Transport suitable for upstream requests.
 func NewTransport() *http.Transport {
 	return &http.Transport{
 		DialContext:           (&net.Dialer{Timeout: 30 * time.Second}).DialContext,
-		TLSClientConfig:      &tls.Config{MinVersion: tls.VersionTLS12},
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 		MaxIdleConns:          100,
 		MaxIdleConnsPerHost:   20,
 		IdleConnTimeout:       120 * time.Second,
@@ -63,11 +64,11 @@ func NewClient(tp TokenProvider, transport *http.Transport, debug bool) *Client 
 
 // Request configures a single upstream request.
 type Request struct {
-	Method      string
-	Endpoint    string
-	Body        interface{} // []byte, io.Reader, or JSON-marshalable struct; nil for no body
-	QueryString string      // raw query string to append (without leading '?')
-	Stream      bool        // if true, returns *http.Response instead of reading body
+	Method       string
+	Endpoint     string
+	Body         interface{}       // []byte, io.Reader, or JSON-marshalable struct; nil for no body
+	QueryString  string            // raw query string to append (without leading '?')
+	Stream       bool              // if true, returns *http.Response instead of reading body
 	ExtraHeaders map[string]string // additional headers to set after copilot headers
 }
 
@@ -102,6 +103,18 @@ func (c *Client) Do(ctx context.Context, r Request) (*http.Response, []byte, err
 		data, err := json.Marshal(v)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to marshal request: %w", err)
+		}
+		bodyReader = bytes.NewReader(data)
+	}
+
+	if c.StripUnsupportedParams && bodyReader != nil {
+		data, err := io.ReadAll(bodyReader)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to read request for parameter filtering: %w", err)
+		}
+		data, err = stripUnsupportedParams(data)
+		if err != nil {
+			return nil, nil, err
 		}
 		bodyReader = bytes.NewReader(data)
 	}
@@ -187,6 +200,20 @@ func (c *Client) Do(ctx context.Context, r Request) (*http.Response, []byte, err
 	}
 	slog.Debug("upstream response", "endpoint", r.Endpoint, "status", resp.StatusCode, "body", truncateStr(string(respData), 2000))
 	return nil, respData, nil
+}
+
+func stripUnsupportedParams(data []byte) ([]byte, error) {
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, fmt.Errorf("failed to filter unsupported request parameters: %w", err)
+	}
+	delete(body, "temperature")
+	delete(body, "top_p")
+	filtered, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal filtered request: %w", err)
+	}
+	return filtered, nil
 }
 
 func truncateStr(s string, maxLen int) string {

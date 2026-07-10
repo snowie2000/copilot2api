@@ -29,6 +29,10 @@ func NewHandler(authClient upstream.TokenProvider, transport *http.Transport, mc
 	return &Handler{upstream: upstream.NewClient(authClient, transport, debug), models: mc}
 }
 
+func (h *Handler) SetStripUnsupportedParams(enabled bool) {
+	h.upstream.StripUnsupportedParams = enabled
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	defer func() {

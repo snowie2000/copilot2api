@@ -29,16 +29,14 @@ var version = "dev"
 
 func main() {
 	var (
-		port        = flag.Int("port", 0, "Server port (env: COPILOT2API_PORT, default: 7777)")
-		host        = flag.String("host", "", "Server host (env: COPILOT2API_HOST, default: 127.0.0.1)")
-		tokenDir    = flag.String("token-dir", "", "Token storage directory (env: COPILOT2API_TOKEN_DIR, default: ~/.config/copilot2api)")
-		showVersion = flag.Bool("version", false, "Show version and exit")
-		debug       = flag.Bool("debug", false, "Enable debug logging (env: COPILOT2API_DEBUG)")
-
+		port                   = flag.Int("port", 0, "Server port (env: COPILOT2API_PORT, default: 7777)")
+		host                   = flag.String("host", "", "Server host (env: COPILOT2API_HOST, default: 127.0.0.1)")
+		tokenDir               = flag.String("token-dir", "", "Token storage directory (env: COPILOT2API_TOKEN_DIR, default: ~/.config/copilot2api)")
+		showVersion            = flag.Bool("version", false, "Show version and exit")
+		debug                  = flag.Bool("debug", false, "Enable debug logging (env: COPILOT2API_DEBUG)")
+		stripUnsupportedParams = flag.Bool("strip-unsupported-params", false, "Remove unsupported temperature and top_p parameters from upstream requests")
 	)
 	flag.Parse()
-
-
 
 	// Apply debug env var
 	if !*debug {
@@ -119,16 +117,20 @@ func main() {
 	// Shared models cache — a single fetch populates both raw JSON (for
 	// proxying GET /v1/models) and parsed model info (for capability detection).
 	upstreamClient := upstream.NewClient(authClient, transport, *debug)
+	upstreamClient.StripUnsupportedParams = *stripUnsupportedParams
 	modelsCache := models.NewCache(upstreamClient, 5*time.Minute)
 
 	// Initialize proxy handler
 	proxyHandler := proxy.NewHandler(authClient, transport, modelsCache, *debug)
+	proxyHandler.SetStripUnsupportedParams(*stripUnsupportedParams)
 
 	// Initialize Anthropic handler
 	anthropicHandler := anthropic.NewHandler(authClient, transport, modelsCache, *debug)
+	anthropicHandler.SetStripUnsupportedParams(*stripUnsupportedParams)
 
 	// Initialize Gemini handler
 	geminiHandler := gemini.NewHandler(authClient, transport, modelsCache, *debug)
+	geminiHandler.SetStripUnsupportedParams(*stripUnsupportedParams)
 
 	// Set up routes
 	mux := http.NewServeMux()

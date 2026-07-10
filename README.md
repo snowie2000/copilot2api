@@ -248,8 +248,9 @@ message = client.messages.create(
   -host string       Server host (default "127.0.0.1")
   -port int          Server port (default 7777)
   -token-dir string  Token storage directory (default ~/.config/copilot2api)
-  -debug             Enable debug logging
-  -version           Show version and exit
+  -debug                      Enable debug logging
+  -strip-unsupported-params   Remove temperature and top_p from upstream requests
+  -version                    Show version and exit
 ```
 
 ### Environment Variables

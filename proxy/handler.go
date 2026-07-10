@@ -33,6 +33,10 @@ func NewHandler(authClient *auth.Client, transport *http.Transport, mc *models.C
 	}
 }
 
+func (h *Handler) SetStripUnsupportedParams(enabled bool) {
+	h.upstream.StripUnsupportedParams = enabled
+}
+
 // ServeHTTP handles all proxy requests
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()

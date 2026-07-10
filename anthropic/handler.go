@@ -32,6 +32,10 @@ func NewHandler(authClient upstream.TokenProvider, transport *http.Transport, mc
 	}
 }
 
+func (h *Handler) SetStripUnsupportedParams(enabled bool) {
+	h.upstream.StripUnsupportedParams = enabled
+}
+
 // ServeHTTP handles /v1/messages requests
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
